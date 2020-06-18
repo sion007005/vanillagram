@@ -3,8 +3,6 @@
  * All rights reserved. 무단전재 및 재배포 금지.
  * All contents cannot be copied without permission.
  */
-(async () => {
-
     const common = (() => {
         const IMG_PATH = 'https://devingmd.github.io/lesson/img';
         const fetchApiData = async (url, page = 'info') => {
@@ -18,22 +16,27 @@
     
     const Root = (selector) => {
         let $el;
-        let $page; //자식 컴포넌트
+        let $page; 
     
         const create = () => {
             $el = document.querySelector(selector);
             $page = Timeline($el);
         }
+
+        const destroy = () => {
+            //자식 컴포넌트가 존재하면, detroy
+            $page && $page.destroy();
+        }
     
         create();
-        return { $el }
+        return { $el, destroy }
     };
     
     const Timeline = ($parent) => {
         const URL = 'https://my-json-server.typicode.com/it-crafts/lesson/timeline/';
         let $el;
-        let $profile; //자식 컴포넌트
-        let $content; //자식 컴포넌트
+        let $profile; 
+        let $content;
         
         const create = async () => {
             render();
@@ -42,6 +45,13 @@
             const [ totalPage, profileData ] = await fetch();
             $profile = TimelineProfile($el, profileData);
             $content = TimelineContent($el, URL, profileData);
+        }
+
+        const destroy = () => {
+            $profile && $profile.destroy();
+            $content && $content.destroy();
+            // 자기자신 컴포넌트 엘리먼트도 제거
+            $parent.removeChild($el);
         }
 
         const fetch = async () => {
@@ -64,7 +74,7 @@
         }
     
         create();
-        return { $el }
+        return { $el, destroy }
     };
     
     const TimelineProfile = ($parent, profileData) => {
@@ -75,6 +85,10 @@
             $el = $parent.firstElementChild;
         }
     
+        const destroy = () => {
+            $parent.removeChild($el);
+        } 
+
         const scaleDown = numstring => {
             const num = numstring.replace(/,/g, '');
             if(num >= 1000000) {
@@ -125,12 +139,12 @@
         }
     
         create();
-        return { $el }
+        return { $el, destroy }
     };
     
     const TimelineContent = ($parent, url, profileData) => {
         let $el;
-        const $feedItemList = []; //자식 컴포넌트 리스트
+        const $feedItemList = [];
 
         let page = 1;
         const list = [];
@@ -141,6 +155,11 @@
             const pageData = await fetch();
             const feedItemList = pageData.map(data => FeedItem($el.firstElementChild, profileData, data));
             $feedItemList.push(...feedItemList);
+        }
+
+        const destroy = () => {
+            Array.isArray($feedItemList) && $feedItemList.forEach($feedItem => $feedItem.destroy());
+            $parent.removeChild($el);
         }
 
         const fetch = async () => {
@@ -166,7 +185,7 @@
         }
     
         create();
-        return { $el, list, profileData }
+        return { $el, destroy }
     };
     
     const FeedItem = ($parent, profileData, data) => {
@@ -175,6 +194,10 @@
         const create = () => {
             render(data);
             $el = $parent.lastElementChild;
+        }
+
+        const destroy = () => {
+            $parent.removeChild($el);
         }
 
         const render = (data) => {
@@ -242,8 +265,9 @@
         }
 
         create();
-        return { $el }
+        return { $el, destroy }
     };   
 
-    const app = Root('main');
-    })();
+    const root = Root('main');
+
+    // root.destroy(); //해당 라인 실행 시 app 구동 이전 상태로 초기화 됨
