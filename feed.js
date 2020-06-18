@@ -16,37 +16,39 @@
         return { IMG_PATH, fetchApiData }
     })();
     
-    const Root = () => {
+    const Root = (selector) => {
         let $el;
+        let $page; //자식 컴포넌트
     
         const create = () => {
-            $el = document.querySelector('main');
+            $el = document.querySelector(selector);
+            $page = Timeline($el);
         }
     
         create();
         return { $el }
     };
     
-    //컴포넌틑 레벨 async/await 제거 후 생성자로 변경
     const Timeline = ($parent) => {
+        const URL = 'https://my-json-server.typicode.com/it-crafts/lesson/timeline/';
         let $el;
-        const url = 'https://my-json-server.typicode.com/it-crafts/lesson/timeline/';
-        
-        let totalPage = 0;
-        const profileData = {};
+        let $profile; //자식 컴포넌트
+        let $content; //자식 컴포넌트
         
         const create = async () => {
             render();
             $el = $parent.firstElementChild;
-            await fetch();
+            
+            const [ totalPage, profileData ] = await fetch();
+            $profile = TimelineProfile($el, profileData);
+            $content = TimelineContent($el, URL, profileData);
         }
 
-        //API 호출 로직을 별도의 fetch 메소드로 분리
         const fetch = async () => {
-            const infoData = await common.fetchApiData(url);
-            totalPage = infoData.totalPage * 1;
-            Object.assign(profileData, infoData.profile);
-            return infoData;
+            const infoData = await common.fetchApiData(URL);
+            const totalPage = infoData.totalPage * 1;
+            const profileData = infoData.profile;
+            return [ totalPage, profileData ];
         }
     
         const render = () => {
@@ -62,7 +64,7 @@
         }
     
         create();
-        return { $el, totalPage, profileData, url }
+        return { $el }
     };
     
     const TimelineProfile = ($parent, profileData) => {
@@ -126,9 +128,9 @@
         return { $el }
     };
     
-    // 컴포넌트 레벨 async/await 제거 후 생성자로 변경
     const TimelineContent = ($parent, url, profileData) => {
         let $el;
+        const $feedItemList = []; //자식 컴포넌트 리스트
 
         let page = 1;
         const list = [];
@@ -136,7 +138,9 @@
         const create = async () => {
             render();
             $el = $parent.lastElementChild;
-            await fetch();
+            const pageData = await fetch();
+            const feedItemList = pageData.map(data => FeedItem($el.firstElementChild, profileData, data));
+            $feedItemList.push(...feedItemList);
         }
 
         const fetch = async () => {
@@ -165,80 +169,81 @@
         return { $el, list, profileData }
     };
     
-        const FeedItem = ($parent, profileData, data) => {
-            let $el;
+    const FeedItem = ($parent, profileData, data) => {
+        let $el;
 
-            const create = () => {
-                render(data);
-                $el = $parent.lastElementChild;
-            }
+        const create = () => {
+            render(data);
+            $el = $parent.lastElementChild;
+        }
 
-            const render = (data) => {
-                $parent.insertAdjacentHTML('beforeend', `
-                <article id="feed" class="M9sTE h0YNM SgTZ1">
-                    <header class="Ppjfr UE9AK wdOqh">
-                        <div class="RR-M- h5uC0 mrq0Z" role="button" tabindex="0">
-                            <canvas class="CfWVH" height="126" width="126" style="position: absolute; top: -5px; left: -5px; width: 42px; height: 42px;"></canvas>
-                            <span class="_2dbep" role="link" tabindex="0" style="width: 32px; height: 32px;"><img alt="${profileData.name}님의 프로필 사진" class="_6q-tv" src="${common.IMG_PATH}${profileData.img}"></span>
-                        </div>
-                        <div class="o-MQd">
-                            <div class="e1e1d">
-                                <h2 class="BrX75"><a class="FPmhX notranslate nJAzx" title="${profileData.name}" href="javascript:;">${profileData.name}</a></h2>
-                            </div>
-                        </div>
-                    </header>
-                    <div class="_97aPb">
-                        <div role="button" tabindex="0" class="ZyFrc">
-                            <div class="eLAPa kPFhm">
-                                <div class="KL4Bh" style="padding-bottom: 100%;"><img class="FFVAD" alt="${data.name}" src="${common.IMG_PATH}${data.img}" style="object-fit: cover;"></div>
-                                <div class="_9AhH0"></div>
-                            </div>
+        const render = (data) => {
+            $parent.insertAdjacentHTML('beforeend', `
+            <article id="feed" class="M9sTE h0YNM SgTZ1">
+                <header class="Ppjfr UE9AK wdOqh">
+                    <div class="RR-M- h5uC0 mrq0Z" role="button" tabindex="0">
+                        <canvas class="CfWVH" height="126" width="126" style="position: absolute; top: -5px; left: -5px; width: 42px; height: 42px;"></canvas>
+                        <span class="_2dbep" role="link" tabindex="0" style="width: 32px; height: 32px;"><img alt="${profileData.name}님의 프로필 사진" class="_6q-tv" src="${common.IMG_PATH}${profileData.img}"></span>
+                    </div>
+                    <div class="o-MQd">
+                        <div class="e1e1d">
+                            <h2 class="BrX75"><a class="FPmhX notranslate nJAzx" title="${profileData.name}" href="javascript:;">${profileData.name}</a></h2>
                         </div>
                     </div>
-                    <div class="eo2As">
-                        <section class="ltpMr Slqrh">
-                            <span class="fr66n"><button class="dCJp8 afkep"><span aria-label="좋아요" class="glyphsSpriteHeart__outline__24__grey_9 u-__7"></span></button></span>
-                            <span class="_15y0l"><button class="dCJp8 afkep"><span aria-label="댓글 달기" class="glyphsSpriteComment__outline__24__grey_9 u-__7"></span></button></span>
-                            <span class="_5e4p"><button class="dCJp8 afkep"><span aria-label="게시물 공유" class="glyphsSpriteDirect__outline__24__grey_9 u-__7"></span></button></span>
-                            <span class="wmtNn"><button class="dCJp8 afkep"><span aria-label="저장" class="glyphsSpriteSave__outline__24__grey_9 u-__7"></span></button></span>
-                        </section>
-                        <section class="EDfFK ygqzn">
-                            <div class=" Igw0E IwRSH eGOV_ ybXk5 vwCYk">
-                                <div class="Nm9Fw"><a class="zV_Nj" href="javascript:;">좋아요 <span>${data.clipCount}</span>개</a></div>
-                            </div>
-                        </section>
-                        <div class="KlCQn EtaWk">
-                            <ul class="k59kT">
-                                <div role="button" class="ZyFrc">
-                                    <li class="gElp9" role="menuitem">
-                                        <div class="P9YgZ">
-                                            <div class="C7I1f X7jCj">
-                                                <div class="C4VMK">
-                                                    <h2 class="_6lAjh"><a class="FPmhX notranslate TlrDj" title="${profileData.name}" href="javascript:;">${profileData.name}</a></h2>
-                                                    <span>${data.text}</span>
-                                                </div>
+                </header>
+                <div class="_97aPb">
+                    <div role="button" tabindex="0" class="ZyFrc">
+                        <div class="eLAPa kPFhm">
+                            <div class="KL4Bh" style="padding-bottom: 100%;"><img class="FFVAD" alt="${data.name}" src="${common.IMG_PATH}${data.img}" style="object-fit: cover;"></div>
+                            <div class="_9AhH0"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="eo2As">
+                    <section class="ltpMr Slqrh">
+                        <span class="fr66n"><button class="dCJp8 afkep"><span aria-label="좋아요" class="glyphsSpriteHeart__outline__24__grey_9 u-__7"></span></button></span>
+                        <span class="_15y0l"><button class="dCJp8 afkep"><span aria-label="댓글 달기" class="glyphsSpriteComment__outline__24__grey_9 u-__7"></span></button></span>
+                        <span class="_5e4p"><button class="dCJp8 afkep"><span aria-label="게시물 공유" class="glyphsSpriteDirect__outline__24__grey_9 u-__7"></span></button></span>
+                        <span class="wmtNn"><button class="dCJp8 afkep"><span aria-label="저장" class="glyphsSpriteSave__outline__24__grey_9 u-__7"></span></button></span>
+                    </section>
+                    <section class="EDfFK ygqzn">
+                        <div class=" Igw0E IwRSH eGOV_ ybXk5 vwCYk">
+                            <div class="Nm9Fw"><a class="zV_Nj" href="javascript:;">좋아요 <span>${data.clipCount}</span>개</a></div>
+                        </div>
+                    </section>
+                    <div class="KlCQn EtaWk">
+                        <ul class="k59kT">
+                            <div role="button" class="ZyFrc">
+                                <li class="gElp9" role="menuitem">
+                                    <div class="P9YgZ">
+                                        <div class="C7I1f X7jCj">
+                                            <div class="C4VMK">
+                                                <h2 class="_6lAjh"><a class="FPmhX notranslate TlrDj" title="${profileData.name}" href="javascript:;">${profileData.name}</a></h2>
+                                                <span>${data.text}</span>
                                             </div>
                                         </div>
-                                    </li>
-                                </div>
-                                <li class="lnrre">
-                                    <button class="Z4IfV sqdOP yWX7d y3zKF" type="button">댓글 <span>${data.commentCount}</span>개 모두 보기</button>
+                                    </div>
                                 </li>
-                            </ul>
-                        </div>
-                        <section class="sH9wk _JgwE eJg28">
-                            <div class="RxpZH"></div>
-                        </section>
+                            </div>
+                            <li class="lnrre">
+                                <button class="Z4IfV sqdOP yWX7d y3zKF" type="button">댓글 <span>${data.commentCount}</span>개 모두 보기</button>
+                            </li>
+                        </ul>
                     </div>
-                    <div class="MEAGs">
-                        <button class="dCJp8 afkep"><span aria-label="옵션 더 보기" class="glyphsSpriteMore_horizontal__outline__24__grey_9 u-__7"></span></button>
-                    </div>
-                </article>
-                `);
-            }
-    
-            create();
-            return { $el }
-        };   
-    
+                    <section class="sH9wk _JgwE eJg28">
+                        <div class="RxpZH"></div>
+                    </section>
+                </div>
+                <div class="MEAGs">
+                    <button class="dCJp8 afkep"><span aria-label="옵션 더 보기" class="glyphsSpriteMore_horizontal__outline__24__grey_9 u-__7"></span></button>
+                </div>
+            </article>
+            `);
+        }
+
+        create();
+        return { $el }
+    };   
+
+    const app = Root('main');
     })();
