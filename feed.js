@@ -21,15 +21,14 @@
         const create = () => {
             $el = document.querySelector(selector);
             $page = Timeline($el);
+            $page.create();
         }
 
         const destroy = () => {
-            //자식 컴포넌트가 존재하면, detroy
             $page && $page.destroy();
         }
     
-        create();
-        return { $el, destroy }
+        return { $el, create, destroy }
     };
     
     const Timeline = ($parent) => {
@@ -44,13 +43,14 @@
             
             const [ totalPage, profileData ] = await fetch();
             $profile = TimelineProfile($el, profileData);
+            $profile.create();
             $content = TimelineContent($el, URL, profileData);
+            $content.create();
         }
 
         const destroy = () => {
             $profile && $profile.destroy();
             $content && $content.destroy();
-            // 자기자신 컴포넌트 엘리먼트도 제거
             $parent.removeChild($el);
         }
 
@@ -73,8 +73,7 @@
             `;
         }
     
-        create();
-        return { $el, destroy }
+        return { $el, create, destroy }
     };
     
     const TimelineProfile = ($parent, profileData) => {
@@ -138,8 +137,7 @@
             `);
         }
     
-        create();
-        return { $el, destroy }
+        return { $el, create, destroy }
     };
     
     const TimelineContent = ($parent, url, profileData) => {
@@ -155,6 +153,7 @@
             const pageData = await fetch();
             const feedItemList = pageData.map(data => FeedItem($el.firstElementChild, profileData, data));
             $feedItemList.push(...feedItemList);
+            $feddItemList.forEach($feedItem => $feedItem.create());
         }
 
         const destroy = () => {
@@ -184,15 +183,14 @@
             `);
         }
     
-        create();
-        return { $el, destroy }
+        return { $el, create, destroy }
     };
     
     const FeedItem = ($parent, profileData, data) => {
         let $el;
 
         const create = () => {
-            render(data);
+            render(profileData, data);
             $el = $parent.lastElementChild;
         }
 
@@ -200,7 +198,7 @@
             $parent.removeChild($el);
         }
 
-        const render = (data) => {
+        const render = (profileData, data) => {
             $parent.insertAdjacentHTML('beforeend', `
             <article id="feed" class="M9sTE h0YNM SgTZ1">
                 <header class="Ppjfr UE9AK wdOqh">
@@ -264,10 +262,9 @@
             `);
         }
 
-        create();
-        return { $el, destroy }
+        return { $el, create, destroy }
     };   
 
     const root = Root('main');
-
-    // root.destroy(); //해당 라인 실행 시 app 구동 이전 상태로 초기화 됨
+    root.create();s
+    // root.destroy(); destroy 후 다시 create하면 초기상태로 APP이 재구동 된다.
