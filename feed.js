@@ -76,7 +76,7 @@
         return { $el, create, destroy }
     };
     
-    const TimelineProfile = ($parent, profileData) => {
+    const TimelineProfile = ($parent, profileData = {}) => {
         let $el;
     
         const create = () => {
@@ -140,31 +140,35 @@
         return { $el, create, destroy }
     };
     
-    const TimelineContent = ($parent, url, profileData) => {
+    const TimelineContent = ($parent, url = '', profileData = {}) => {
         let $el;
-        const $feedItemList = [];
+        const $feed;
 
         let page = 1;
-        const list = [];
+        const dataList = [];
 
         const create = async () => {
             render();
             $el = $parent.lastElementChild;
-            const pageData = await fetch();
-            const feedItemList = pageData.map(data => FeedItem($el.firstElementChild, profileData, data));
-            $feedItemList.push(...feedItemList);
-            $feddItemList.forEach($feedItem => $feedItem.create());
+            const pageDataList = await fetch();
+            $feed = Feed($el.firstElementChild, profileData, pageDataList)
+            $feed.create();
         }
 
         const destroy = () => {
-            Array.isArray($feedItemList) && $feedItemList.forEach($feedItem => $feedItem.destroy());
+            Array.isArray($feedList) && $feedList.forEach($feedItem => $feedItem.destroy());
             $parent.removeChild($el);
         }
 
+        const ajaxMore = async () => {
+            const pageDataList = await fetch();
+            $feed && $feed.addFeedItems(profileData, pageDataList);
+        }
+
         const fetch = async () => {
-            const pageData = await common.fetchApiData(url, page++);
-            list.push(pageData);
-            return pageData;
+            const pageDataList = await common.fetchApiData(url, page++);
+            dataList.push(pageDataList);
+            return pageDataList;
         }
     
         const render = () => {
@@ -186,85 +190,94 @@
         return { $el, create, destroy }
     };
     
-    const FeedItem = ($parent, profileData, data) => {
-        let $el;
+    const Feed = ($parent, profileData = {}, pageDataList = []) => {
+        const $elList = [];
 
         const create = () => {
-            render(profileData, data);
-            $el = $parent.lastElementChild;
+            addFeedItems(profileData, pageDataList);
         }
 
         const destroy = () => {
-            $parent.removeChild($el);
+            $elList.forEach($parent.removeChild($el));
         }
 
-        const render = (profileData, data) => {
-            $parent.insertAdjacentHTML('beforeend', `
-            <article id="feed" class="M9sTE h0YNM SgTZ1">
-                <header class="Ppjfr UE9AK wdOqh">
-                    <div class="RR-M- h5uC0 mrq0Z" role="button" tabindex="0">
-                        <canvas class="CfWVH" height="126" width="126" style="position: absolute; top: -5px; left: -5px; width: 42px; height: 42px;"></canvas>
-                        <span class="_2dbep" role="link" tabindex="0" style="width: 32px; height: 32px;"><img alt="${profileData.name}님의 프로필 사진" class="_6q-tv" src="${common.IMG_PATH}${profileData.img}"></span>
-                    </div>
-                    <div class="o-MQd">
-                        <div class="e1e1d">
-                            <h2 class="BrX75"><a class="FPmhX notranslate nJAzx" title="${profileData.name}" href="javascript:;">${profileData.name}</a></h2>
-                        </div>
-                    </div>
-                </header>
-                <div class="_97aPb">
-                    <div role="button" tabindex="0" class="ZyFrc">
-                        <div class="eLAPa kPFhm">
-                            <div class="KL4Bh" style="padding-bottom: 100%;"><img class="FFVAD" alt="${data.name}" src="${common.IMG_PATH}${data.img}" style="object-fit: cover;"></div>
-                            <div class="_9AhH0"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="eo2As">
-                    <section class="ltpMr Slqrh">
-                        <span class="fr66n"><button class="dCJp8 afkep"><span aria-label="좋아요" class="glyphsSpriteHeart__outline__24__grey_9 u-__7"></span></button></span>
-                        <span class="_15y0l"><button class="dCJp8 afkep"><span aria-label="댓글 달기" class="glyphsSpriteComment__outline__24__grey_9 u-__7"></span></button></span>
-                        <span class="_5e4p"><button class="dCJp8 afkep"><span aria-label="게시물 공유" class="glyphsSpriteDirect__outline__24__grey_9 u-__7"></span></button></span>
-                        <span class="wmtNn"><button class="dCJp8 afkep"><span aria-label="저장" class="glyphsSpriteSave__outline__24__grey_9 u-__7"></span></button></span>
-                    </section>
-                    <section class="EDfFK ygqzn">
-                        <div class=" Igw0E IwRSH eGOV_ ybXk5 vwCYk">
-                            <div class="Nm9Fw"><a class="zV_Nj" href="javascript:;">좋아요 <span>${data.clipCount}</span>개</a></div>
-                        </div>
-                    </section>
-                    <div class="KlCQn EtaWk">
-                        <ul class="k59kT">
-                            <div role="button" class="ZyFrc">
-                                <li class="gElp9" role="menuitem">
-                                    <div class="P9YgZ">
-                                        <div class="C7I1f X7jCj">
-                                            <div class="C4VMK">
-                                                <h2 class="_6lAjh"><a class="FPmhX notranslate TlrDj" title="${profileData.name}" href="javascript:;">${profileData.name}</a></h2>
-                                                <span>${data.text}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </li>
+        const addFeedItems = (profileData = {}, pageDataList = []) => {
+            const firstIndex = $parent.children.length;
+            render(profileData, pageDataList);
+            $elList.push(...[].slice.call($parent.children, firstIndex));
+        }
+
+        const render = (profileData, pageDataList) => {
+            const html = pageDataList.reduce((html, data) => {
+                html += `
+                    <article id="feed" class="M9sTE h0YNM SgTZ1">
+                        <header class="Ppjfr UE9AK wdOqh">
+                            <div class="RR-M- h5uC0 mrq0Z" role="button" tabindex="0">
+                                <canvas class="CfWVH" height="126" width="126" style="position: absolute; top: -5px; left: -5px; width: 42px; height: 42px;"></canvas>
+                                <span class="_2dbep" role="link" tabindex="0" style="width: 32px; height: 32px;"><img alt="${profileData.name}님의 프로필 사진" class="_6q-tv" src="${common.IMG_PATH}${profileData.img}"></span>
                             </div>
-                            <li class="lnrre">
-                                <button class="Z4IfV sqdOP yWX7d y3zKF" type="button">댓글 <span>${data.commentCount}</span>개 모두 보기</button>
-                            </li>
-                        </ul>
+                            <div class="o-MQd">
+                                <div class="e1e1d">
+                                    <h2 class="BrX75"><a class="FPmhX notranslate nJAzx" title="${profileData.name}" href="javascript:;">${profileData.name}</a></h2>
+                                </div>
+                            </div>
+                        </header>
+                        <div class="_97aPb">
+                            <div role="button" tabindex="0" class="ZyFrc">
+                                <div class="eLAPa kPFhm">
+                                    <div class="KL4Bh" style="padding-bottom: 100%;"><img class="FFVAD" alt="${data.name}" src="${common.IMG_PATH}${data.img}" style="object-fit: cover;"></div>
+                                    <div class="_9AhH0"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="eo2As">
+                            <section class="ltpMr Slqrh">
+                                <span class="fr66n"><button class="dCJp8 afkep"><span aria-label="좋아요" class="glyphsSpriteHeart__outline__24__grey_9 u-__7"></span></button></span>
+                                <span class="_15y0l"><button class="dCJp8 afkep"><span aria-label="댓글 달기" class="glyphsSpriteComment__outline__24__grey_9 u-__7"></span></button></span>
+                                <span class="_5e4p"><button class="dCJp8 afkep"><span aria-label="게시물 공유" class="glyphsSpriteDirect__outline__24__grey_9 u-__7"></span></button></span>
+                                <span class="wmtNn"><button class="dCJp8 afkep"><span aria-label="저장" class="glyphsSpriteSave__outline__24__grey_9 u-__7"></span></button></span>
+                            </section>
+                            <section class="EDfFK ygqzn">
+                                <div class=" Igw0E IwRSH eGOV_ ybXk5 vwCYk">
+                                    <div class="Nm9Fw"><a class="zV_Nj" href="javascript:;">좋아요 <span>${data.clipCount}</span>개</a></div>
+                                </div>
+                            </section>
+                            <div class="KlCQn EtaWk">
+                                <ul class="k59kT">
+                                    <div role="button" class="ZyFrc">
+                                        <li class="gElp9" role="menuitem">
+                                            <div class="P9YgZ">
+                                                <div class="C7I1f X7jCj">
+                                                    <div class="C4VMK">
+                                                        <h2 class="_6lAjh"><a class="FPmhX notranslate TlrDj" title="${profileData.name}" href="javascript:;">${profileData.name}</a></h2>
+                                                        <span>${data.text}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </div>
+                                    <li class="lnrre">
+                                        <button class="Z4IfV sqdOP yWX7d y3zKF" type="button">댓글 <span>${data.commentCount}</span>개 모두 보기</button>
+                                    </li>
+                                </ul>
+                            </div>
+                            <section class="sH9wk _JgwE eJg28">
+                                <div class="RxpZH"></div>
+                            </section>
                     </div>
-                    <section class="sH9wk _JgwE eJg28">
-                        <div class="RxpZH"></div>
-                    </section>
-                </div>
-                <div class="MEAGs">
-                    <button class="dCJp8 afkep"><span aria-label="옵션 더 보기" class="glyphsSpriteMore_horizontal__outline__24__grey_9 u-__7"></span></button>
-                </div>
-            </article>
-            `);
+                    <div class="MEAGs">
+                        <button class="dCJp8 afkep"><span aria-label="옵션 더 보기" class="glyphsSpriteMore_horizontal__outline__24__grey_9 u-__7"></span></button>
+                    </div>
+                </article>
+                `;
+                return html;
+            },'');
+            $parent.insertAdjacentHTML('beforeend', html);
         }
 
-        return { $el, create, destroy }
+        return { $elList, create, destroy, addFeedItems }
     };   
 
     const root = Root('main');
-    root.create();s
+    root.create();
     // root.destroy(); destroy 후 다시 create하면 초기상태로 APP이 재구동 된다.
