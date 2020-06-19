@@ -151,7 +151,7 @@
             render();
             $el = $parent.lastElementChild;
             const pageDataList = await fetch();
-            $feed = Feed($el.firstElementChild, profileData, pageDataList)
+            $feed = Feed($el.firstElementChild, profileData, pageDataList, page, totalPage)
             $feed.create();
             initInfiniteScroll();
         }
@@ -169,21 +169,16 @@
 
         const initInfiniteScroll = () => {
             const $loading = $el.lastElementChild;
-            //뷰포트(다른 부모 엘리먼트로 변경가능)와 특정 엘리먼트의 교차시점을 캐치, 들어올 때 + 나갔을 때 콜백 실행
             const io = new IntersectionObserver((entrieList, observer) => {
-                //여러 엘리먼트를 등록할 수 있으므로, entrieList는 기본적으로 배열로 들어옴
                 entrieList.forEach(async entry => {
-                    //엘리먼트가 뷰포트와 교차하는지 여부
                     if(!entry.isIntersecting) { return; }
                         await ajaxMore();
                     if(page >= totalPage) {
-                        //무한 스크롤 끝난 시점에 바라보기 종료 
                         observer.unobserve(entry.target);
                         $loading.style.display = 'none';
                     }
                 });
             });
-            //무한 스크롤을 위해 가시성 바라보기 시작, 여러개의 엘리먼트를 등록할 수도 있음
             io.observe($loading);
         }
     
@@ -207,10 +202,18 @@
         return { $el, create, destroy }
     };
     
-    const Feed = ($parent, profileData = {}, pageDataList = []) => {
+    const Feed = ($parent, profileData = {}, pageDataList = [], page = 0, totalPage = 1) => {
         const $elList = [];
+        let addedList = [];
+        let io;
 
-        const create = () => {
+        const create = async () => {
+            io = new IntersectionObserver((entrieList) => {                                
+                entrieList.forEach(entry => {
+                    if(!entry.isIntersecting) { return; }
+                        displayImg(entry.target);
+                });
+            })   
             addFeedItems(profileData, pageDataList);
         }
 
@@ -222,7 +225,19 @@
             const firstIndex = $parent.children.length;
             render(profileData, pageDataList);
             $elList.push(...[].slice.call($parent.children, firstIndex));
+            addedList = $elList.slice(firstIndex);
+            console.log(addedList)
+            addedList.forEach(img => io.observe(img));
         }
+            
+        const displayImg = (target) => {
+            const aLazyImg = target.querySelector('img[data-src]');
+            
+            aLazyImg.src = aLazyImg.dataset['src'];
+            delete aLazyImg.dataset.src;
+            
+            io.unobserve(target)
+        };
 
         const render = (profileData, pageDataList) => {
             const html = pageDataList.reduce((html, data) => {
@@ -242,7 +257,7 @@
                         <div class="_97aPb">
                             <div role="button" tabindex="0" class="ZyFrc">
                                 <div class="eLAPa kPFhm">
-                                    <div class="KL4Bh" style="padding-bottom: 100%;"><img class="FFVAD" alt="${data.name}" src="${common.IMG_PATH}${data.img}" style="object-fit: cover;"></div>
+                                    <div class="KL4Bh" style="padding-bottom: 100%;"><img class="FFVAD" alt="${data.name}" src="${common.IMG_PATH}/lazy${data.img}" data-src="${common.IMG_PATH}${data.img}" style="object-fit: cover;"></div>
                                     <div class="_9AhH0"></div>
                                 </div>
                             </div>
