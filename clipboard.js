@@ -5,7 +5,7 @@
  */
 (async () => {
     const common = (()=> {
-        const IMG_PATH = 'https://devingmd.github.io/lesson/img';
+        const IMG_PATH = 'https://it-crafts.github.io/lesson/img';
         const fetchApiData = async function(url, page = 'info') {
             const res = await fetch(url + page);
             const data = await res.json();

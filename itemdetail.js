@@ -4,7 +4,7 @@
  * All contents cannot be copied without permission.
  */
 const common = (() => {
-    const IMG_PATH = 'https://devingmd.github.io/lesson/img';
+    const IMG_PATH = 'https://it-crafts.github.io/lesson/img';
     const fetchApiData = async (url, page = 'info') => {
         const res = await fetch(url + page);
         const data = await res.json();
@@ -16,16 +16,19 @@ const common = (() => {
 
 const Root = (selector) => {
     let $el;
-    let $page;
+    //$제거 - 엘리먼트에서만 사용
+    let page;
 
     const create = () => {
         $el = document.querySelector(selector);
-        $page = ItemDetail($el);
-        $page.create();
+        page = ItemDetail($el);
+        page.create();
+        page = ItemDetail($el);
+        page.create();
     }
 
     const destroy = () => {
-        $page && $page.destroy();
+        page && page.destroy();
     }
 
     return { $el, create, destroy }
@@ -34,25 +37,34 @@ const Root = (selector) => {
 const ItemDetail = ($parent) => {
     const URL = 'https://my-json-server.typicode.com/it-crafts/lesson/detail/';
     let $el;
-    let $item;
-    let $detail;
+    let $loading;
+    let $more;
+
+    let item;
+    let detail;
 
     const data = {};
 
     const create = async () => {
         render();
         $el = $parent.firstElementChild;
+        $loading = $el.querySelector('.js-loading');
+        $more = $el.querySelector('.js-more');
+
         const detailData = await fetch();
-        $item = Item($el.firstElementChild, detailData, detailData.imgList, detailData.profile);
-        $item.create();
-        $detail = Detail($el.firstElementChild, detailData.detailList);
-        $detail.create();
+        item = Item($el.firstElementChild, detailData, detailData.imgList, detailData.profile);
+        item.create();
+        detail = Detail($el.firstElementChild, detailData.detailList);
+        detail.create();
+
+        addEvent();
     }
 
     const destroy = () => {
-        $item && $item.destroy();
-        $detail && $detail.destroy();
+        item && $item.destroy();
+        detail && $detail.destroy();
         $parent.removeChild($el);
+        removeEvent();
     }
 
     const fetch = async () => {
@@ -61,17 +73,67 @@ const ItemDetail = ($parent) => {
         return detailData;
     }
 
+    const addEvent = () => {
+        $more.addEventListener('click', displayMore);
+    };
+
+    const removeEvent = () => {
+        $more.removeEventListener('click', displayMore);
+    };
+
+    const displayMore = (e) => {
+        const clickedEvent =  e.target.dataset.listener;
+        // 딕셔너리에 해당 리스너 존재하면 호출 
+        clickListener[clickedEvent] && clickListener[clickedEvent]();
+    };
+
+    //클릭 이벤트 위임을 위한 리스너 딕셔너리
+    const clickListener = {
+        initInfinite: () => {
+            $more.style.display = 'none';
+            $loading.style.display = '';
+            const io = new IntersectionObserver((entryList, observer) => {
+                entryList.forEach(async entry => {
+                    if(!entry.isIntersecting) {
+                        return;
+                    }
+                    const { hasNext, img } = detail.addImg();
+                    //해당 이미지 로드가 완료되면
+                    img.onload = (e) => {
+                        if(!hasNext) {
+                            observer.unobserve(entry.target);
+                            $loading.style.display = 'none';
+                        }
+                    }
+                });
+            }, { rootMargin: innerHeight + 'px' });
+            io.observe($loading);
+        },
+        loadMore: () => {
+            $more.style.display = 'none';
+            $loading.style.display = '';
+            const { hasNext, img } = detail.addImg();
+            // 해당 이미지 로드가 완료되었을 때
+            img.onload = (e) => {
+                if(hasNext) {
+                    $more.style.display = '';
+                }
+                $loading.style.display = 'none';
+            }
+        }
+    }
+
     const render = () => {
         $parent.innerHTML = `
             <div class="_2z6nI">
                 <div style="flex-direction: column;">
                 </div>
-                <div class="js-loading _4emnV">
-                    <div class="Igw0E IwRSH YBx95 _4EzTm _9qQ0O ZUqME" style="height: 32px; width: 32px;"><svg aria-label="읽어들이는 중..." class="By4nA" viewBox="0 0 100 100"><rect fill="#555555" height="6" opacity="0" rx="3" ry="3" transform="rotate(-90 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.08333333333333333" rx="3" ry="3" transform="rotate(-60 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.16666666666666666" rx="3" ry="3" transform="rotate(-30 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.25" rx="3" ry="3" transform="rotate(0 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.3333333333333333" rx="3" ry="3" transform="rotate(30 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.4166666666666667" rx="3" ry="3" transform="rotate(60 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.5" rx="3" ry="3" transform="rotate(90 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.5833333333333334" rx="3" ry="3" transform="rotate(120 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.6666666666666666" rx="3" ry="3" transform="rotate(150 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.75" rx="3" ry="3" transform="rotate(180 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.8333333333333334" rx="3" ry="3" transform="rotate(210 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.9166666666666666" rx="3" ry="3" transform="rotate(240 50 50)" width="25" x="72" y="47"></rect></svg></div>
-                </div>
                 <div class="js-more Igw0E rBNOH YBx95 ybXk5 _4EzTm soMvl" style="margin-right: 8px;">
-                    <button class="sqdOP L3NKy y3zKF _4pI4F" type="button" style="margin: 16px 8px">더보기</button>
-                    <button class="sqdOP L3NKy y3zKF _4pI4F" type="button" style="margin: 16px 8px">전체보기</button>
+                    <button data-listener="loadMore" class="sqdOP L3NKy y3zKF _4pI4F" type="button" style="margin: 16px 8px1">더보기</button>
+                    <button data-listener="initInfinite" class="sqdOP L3NKy y3zKF _4pI4F" type="button" style="margin: 16px 8px">전체보기</button>
+                </div>
+                <div class="js-loading _4emnV" style="display:none">
+                    <div class="Igw0E IwRSH YBx95 _4EzTm _9qQ0O ZUqME" style="height: 32px; width: 32px;"><svg aria-label="읽어들이는 중..." class="By4nA" viewBox="0 0 100 100"><rect fill="#555555" height="6" opacity="0" rx="3" ry="3" transform="rotate(-90 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.08333333333333333" rx="3" ry="3" transform="rotate(-60 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.16666666666666666" rx="3" ry="3" transform="rotate(-30 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.25" rx="3" ry="3" transform="rotate(0 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.3333333333333333" rx="3" ry="3" transform="rotate(30 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.4166666666666667" rx="3" ry="3" transform="rotate(60 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.5" rx="3" ry="3" transform="rotate(90 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.5833333333333334" rx="3" ry="3" transform="rotate(120 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.6666666666666666" rx="3" ry="3" transform="rotate(150 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.75" rx="3" ry="3" transform="rotate(180 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.8333333333333334" rx="3" ry="3" transform="rotate(210 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.9166666666666666" rx="3" ry="3" transform="rotate(240 50 50)" width="25" x="72" y="47"></rect></svg></div>
                 </div>
             </div>
         `;
@@ -87,6 +149,7 @@ const Item = ($parent, detailData = {}, imgDataList = [], profileData = {}) => {
         render(detailData, imgDataList, profileData, innerWidth);
         $el = $parent.firstElementChild;
     }
+
 
     const destroy = () => {
         $parent.removeChild;
@@ -213,15 +276,25 @@ const Detail = ($parent, detailDataList = []) => {
     const dataList = [];
 
     const create = () => {
-        addImg();
+        // 첫 페이지를 자동으로 로드하지 않기
+        // addImg();
     };
 
     const addImg = () => {
+        // 제일 앞에 있는 이미지 뽑아 UI에 추가
         const detailData = detailDataList.shift();
         render(detailData);
-        $elList.push($parent.lastElementChild);
+        // 그려진 DOM 엘리먼트를 $elList에 추가
+        const $el = $parent.lastElementChild;
+        $elList.push($el);
+        // 그려진 데이터를 dataList에 추가
         dataList.push(detailData);
-        return { hasNext: detailDataList.length > 0 };
+
+        return { 
+            // 아직 그리지 않은 이미지가 있다면 true
+            hasNext: detailDataList.length > 0,
+            img: $el.querySelector('img'),
+        };
     };
 
     const destroy = () => {
@@ -236,7 +309,7 @@ const Detail = ($parent, detailDataList = []) => {
         `);
     }
 
-    return { $elList, create, destroy }
+    return { $elList, create, destroy, addImg }
 };
 
 const root = Root('main');

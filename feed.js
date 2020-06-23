@@ -4,7 +4,7 @@
  * All contents cannot be copied without permission.
  */
     const common = (() => {
-        const IMG_PATH = 'https://devingmd.github.io/lesson/img';
+        const IMG_PATH = 'https://it-crafts.github.io/lesson/img';
         const fetchApiData = async (url, page = 'info') => {
             const res = await fetch(url + page);
             const data = await res.json();
@@ -215,7 +215,7 @@
                 });
             })   
             addFeedItems(profileData, pageDataList);
-        }
+        };
 
         const destroy = () => {
             $elList.forEach($parent.removeChild($el));
@@ -230,8 +230,6 @@
         }
             
         const displayImg = (target) => {
-            console.log('보여줭');
-            
             const aLazyImg = target.querySelector('img[data-src]');
             
             aLazyImg.src = aLazyImg.dataset['src'];
