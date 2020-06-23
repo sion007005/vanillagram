@@ -16,7 +16,6 @@ const common = (() => {
 
 const Root = (selector) => {
     let $el;
-    //$제거 - 엘리먼트에서만 사용
     let page;
 
     const create = () => {
@@ -31,7 +30,7 @@ const Root = (selector) => {
         page && page.destroy();
     }
 
-    return { $el, create, destroy }
+    return { create, destroy }
 };
 
 const ItemDetail = ($parent) => {
@@ -83,11 +82,9 @@ const ItemDetail = ($parent) => {
 
     const displayMore = (e) => {
         const clickedEvent =  e.target.dataset.listener;
-        // 딕셔너리에 해당 리스너 존재하면 호출 
         clickListener[clickedEvent] && clickListener[clickedEvent]();
     };
 
-    //클릭 이벤트 위임을 위한 리스너 딕셔너리
     const clickListener = {
         initInfinite: () => {
             $more.style.display = 'none';
@@ -97,29 +94,23 @@ const ItemDetail = ($parent) => {
                     if(!entry.isIntersecting) {
                         return;
                     }
-                    const { hasNext, img } = detail.addImg();
-                    //해당 이미지 로드가 완료되면
-                    img.onload = (e) => {
-                        if(!hasNext) {
-                            observer.unobserve(entry.target);
-                            $loading.style.display = 'none';
-                        }
+                    const { hasNext } = await detail.addImg();
+                    if(!hasNext) {
+                        observer.unobserve(entry.target);
+                        $loading.style.display = 'none';
                     }
                 });
             }, { rootMargin: innerHeight + 'px' });
             io.observe($loading);
         },
-        loadMore: () => {
+        loadMore: async () => {
             $more.style.display = 'none';
             $loading.style.display = '';
-            const { hasNext, img } = detail.addImg();
-            // 해당 이미지 로드가 완료되었을 때
-            img.onload = (e) => {
-                if(hasNext) {
-                    $more.style.display = '';
-                }
-                $loading.style.display = 'none';
+            const { hasNext } = await detail.addImg();
+            if(hasNext) {
+                $more.style.display = '';
             }
+            $loading.style.display = 'none';
         }
     }
 
@@ -139,7 +130,7 @@ const ItemDetail = ($parent) => {
         `;
     };
 
-    return { $el, create, destroy }
+    return { create, destroy }
 };
 
 const Item = ($parent, detailData = {}, imgDataList = [], profileData = {}) => {
@@ -268,7 +259,7 @@ const Item = ($parent, detailData = {}, imgDataList = [], profileData = {}) => {
         `);
         }
         
-        return { $el, create, destroy }
+        return { create, destroy }
     };
 
 const Detail = ($parent, detailDataList = []) => {
@@ -276,25 +267,26 @@ const Detail = ($parent, detailDataList = []) => {
     const dataList = [];
 
     const create = () => {
-        // 첫 페이지를 자동으로 로드하지 않기
-        // addImg();
     };
 
     const addImg = () => {
-        // 제일 앞에 있는 이미지 뽑아 UI에 추가
-        const detailData = detailDataList.shift();
-        render(detailData);
-        // 그려진 DOM 엘리먼트를 $elList에 추가
-        const $el = $parent.lastElementChild;
-        $elList.push($el);
-        // 그려진 데이터를 dataList에 추가
-        dataList.push(detailData);
+        // addImg 호출 시 프로미스 강제생성
+        return new Promise(resolve => {
+            const detailData = detailDataList.shift();
+            if(!detailData) {
+                // 예외 케이스 발생 시 false 리턴 후 튕겨준다
+                resolove({ hasNext : false });
+            }
+            render(detailData);
+            const $el = $parent.lastElementChild;
+            $elList.push($el);
+            dataList.push(detailData);
 
-        return { 
-            // 아직 그리지 않은 이미지가 있다면 true
-            hasNext: detailDataList.length > 0,
-            img: $el.querySelector('img'),
-        };
+            $el.querySelector('img').onload = (e) => {
+                // 이미지 로드가 완료되면, 더보기 가능여부를 넘겨준다
+                resolve({ hasNext: detailDataList.length > 0 });
+            }
+        });
     };
 
     const destroy = () => {
@@ -309,7 +301,7 @@ const Detail = ($parent, detailDataList = []) => {
         `);
     }
 
-    return { $elList, create, destroy, addImg }
+    return { create, destroy, addImg }
 };
 
 const root = Root('main');
