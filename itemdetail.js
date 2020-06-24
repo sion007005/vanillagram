@@ -180,34 +180,74 @@ const Item = (() => {
         this.$left = this.$el.querySelector('.js-left');
         this.$right = this.$el.querySelector('.js-right');
         this.$pagebar = this.$el.querySelector('.js-pagebar');
+        this.imgIndex = 0;
     }
     const proto = Item.prototype;
 
     proto.create = function() {
+        this.addEvent();
+        this.$left.style.display = 'none';
     }
 
     proto.destroy = function() {
         this.$parent.removeChild(this.$el);
     }
 
-    proto.click = function() {
-         // TODO $left/$right 화살표 숨김/표시 (필요한 로직 추가)
-        // TODO this.$slider.style.transform = `translateX(${이동좌표}px)`;
-        // TODO $pagebar 이미지에 대응되는 엘리먼트로 XCodT 클래스 이동 (on 처리)
-        // TODO 가로사이즈는 innerWidth로 직접 잡거나, innerWidth를 캐싱해두고 사용
+    proto.click = function(e) {
+        const direction = e.target.parentNode;
+        if(direction === this.$right) {
+            this.imgIndex++;
+        } else if(direction === this.$left) {
+            this.imgIndex--;
+        }
+
+        this.moveImg();
+        this.displayDirections();
+        this.changePageDot();
     }
 
-    proto.resize = function() {
-        // HACK 현재 데이터바인딩을 지원하지 않으므로, 리스트 모든 엘리먼트 지우고 새로 렌더링
-        while(this.$sliderList.firstChildj) {
-            this.$sliderList.removeChild(this.$sliderList.firstChild);
-        }
-        this.$sliderList.insertAdjacentHTML('beforeend', `
-            ${this.htmlSliderImgs(this._dataList)}
-        `);
-        // TODO 리프레시 전 슬라이드 이미지 다시 노출 (좌표보정)
-        // TODO 가로사이즈는 innerWidth로 직접 잡거나, innerWidth를 캐싱해두고 사용
+    proto.addEvent = function() {       
+        this.$click = this.click.bind(this); 
+        this.$left.addEventListener('click', this.$click);
+        this.$right.addEventListener('click', this.$click);
+    };
+
+    proto.moveImg = function() {
+        const width = (this.imgIndex) * innerWidth * -1; 
+        this.$slider.style.transform = `translateX(${width}px)`;
     }
+
+    proto.displayDirections = function() {
+        if(this.imgIndex === 0) {
+            this.$left.style.display = 'none';
+        } else if (this.imgIndex === this._dataList.length - 1) {
+            this.$right.style.display = 'none';
+        } else {
+            this.$left.style.display = '';
+            this.$right.style.display = '';
+        }
+    }
+
+    proto.changePageDot = function() {
+        const onClass = 'XCodT';
+        const prev = this.$pagebar.querySelector('.'+ onClass);
+        const next = this.$pagebar.children[this.imgIndex];
+
+        prev && prev.classList.remove(onClass);
+        next && next.classList.add(onClass);
+    }
+
+    // proto.resize = function() {
+    //     // HACK 현재 데이터바인딩을 지원하지 않으므로, 리스트 모든 엘리먼트 지우고 새로 렌더링
+    //     while(this.$sliderList.firstChildj) {
+    //         this.$sliderList.removeChild(this.$sliderList.firstChild);
+    //     }
+    //     this.$sliderList.insertAdjacentHTML('beforeend', `
+    //         ${this.htmlSliderImgs(this._dataList)}
+    //     `);
+    //     // TODO 리프레시 전 슬라이드 이미지 다시 노출 (좌표보정)
+    //     // TODO 가로사이즈는 innerWidth로 직접 잡거나, innerWidth를 캐싱해두고 사용
+    // }
 
     proto.htmlSliderImgs = function(imgDataList) {
         const imgs = imgDataList.reduce((html, img) => {
@@ -240,6 +280,7 @@ const Item = (() => {
             `;
             return html;
         }, '');
+
         this.$parent.insertAdjacentHTML('afterbegin', `
             <article class="QBXjJ M9sTE h0YNM SgTZ1 Tgarh">
                 <header class="Ppjfr UE9AK wdOqh">
