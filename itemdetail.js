@@ -2,7 +2,7 @@
  * Copyrightⓒ2020 by Moon Hanju (github.com/it-crafts)
  * All rights reserved. 무단전재 및 재배포 금지.
  * All contents cannot be copied without permission.
- */
+*/
 const common = (function() {
     const IMG_PATH = 'https://it-crafts.github.io/lesson/img';
     const fetchApiData = async (url, page = 'info') => {
@@ -25,7 +25,6 @@ const Root = (() => {
         this._page = new ItemDetail(this.$el);
         this._page.create();
     }
-
     proto.destroy = function() {
         this._page && this._page.destroy();
     }
@@ -33,31 +32,63 @@ const Root = (() => {
     return Root;
 })();
 
-const ItemDetail = (() => {
-    const URL = 'https://my-json-server.typicode.com/it-crafts/lesson/detail/';
-    const clickListener = {
-        initInfinite() {
-            this.beforeMore();
-            const io = new IntersectionObserver((entryList, observer) => {
-                entryList.forEach(async entry => {
-                    if(!entry.isIntersecting) {
-                        return;
-                    }
-                    const hasNext = await this.more();
-                    if(!hasNext) {
-                        observer.unobserve(entry.target);
-                        this.afterMore(hasNext);
-                    }
-                });
-            }, { rootMargin: innerHeight + 'px' });
-            io.observe(this.$loading);
-        },
-        async loadMore() {
-            this.beforeMore();
-            const hasNext = await this.more();
-            this.afterMore(hasNext);
+const PageTurner = (() => {
+    const PageTurner = function($loading, $more) {
+        this.$loading = $loading;
+        this.$more = $more;
+    }
+    const proto = PageTurner.prototype;
+
+    proto.more = async function(ajaxMore) {        
+        this.beforeMore();
+        const hasNext = await ajaxMore();
+        this.afterMore(hasNext);
+    }
+    proto.beforeMore = function() {
+        this.$more.style.display = 'none';
+        this.$loading.style.display = '';
+    }
+    proto.afterMore = function(hasNext) {
+        this.$loading.style.display = 'none';
+        if(hasNext) {
+            this.$more.style.display = '';
         }
     }
+
+    return PageTurner;
+})();
+
+const AutoPageTurner = (() => {
+    const AutoPageTurner = function($loading, $more) {
+        PageTurner.call(this, $loading, $more);
+    }
+    AutoPageTurner.prototype = Object.create(PageTurner.prototype);
+    AutoPageTurner.prototype.constructor = AutoPageTurner;
+    const proto = AutoPageTurner.prototype;
+
+    //method overriding
+    proto.more = function(ajaxMore) {      
+        this.beforeMore();  
+        const io = new IntersectionObserver((entryList, observer) => {
+            entryList.forEach(async entry => {
+                if(!entry.isIntersecting) {
+                    return;
+                }
+                const hasNext = await ajaxMore();
+                if(!hasNext) {
+                    observer.unobserve(entry.target);
+                    this.afterMore(hasNext);
+                }
+            });
+        }, { rootMargin: innerHeight + 'px' });
+        io.observe(this.$loading);
+    }
+
+    return AutoPageTurner;
+})();
+
+const ItemDetail = (() => {
+    const URL = 'https://my-json-server.typicode.com/it-crafts/lesson/detail/';
 
     const ItemDetail = function($parent) {
         this.$parent = $parent;
@@ -68,12 +99,12 @@ const ItemDetail = (() => {
 
         this._item;
         this._detail;
+        this._pageTurner;
 
         this._data = {};
 
         this.$click;
-    };
-
+    }
     const proto = ItemDetail.prototype;
 
     proto.create = async function() {
@@ -82,39 +113,30 @@ const ItemDetail = (() => {
         this._item.create();
         this._detail = new Detail(this.$el.firstElementChild, detailData.detailList);
         this._detail.create();
+        this._pageTurner = new PageTurner(this.$loading, this.$more);
         this.addEvent();
     }
     proto.destroy = function() {
         this._item && this._item.destroy();
         this._detail && this._detail.destroy();
-        this.$parent.removeChild(this.$el);
         this.removeEvent();
-    };
+        this.$parent.removeChild(this.$el);
+    }
 
-    proto.beforeMore = function() {
-        this.$more.style.display = 'none';
-        this.$loading.style.display = '';
-    };
-
-    proto.more= async function() {
-        const { hasNext } = await this._detail.addImg();
-        return hasNext;
-    };
-
-    proto.afterMore = function(hasNext) {
-        this.$loading.style.display = 'none';
-        if(hasNext) {
-            this.$more.style.display= '';
-        }
-    };
-
-    proto.displayMore = function(e) {
+    proto.click = function(e) {
         const listener = e.target.dataset.listener;
-        clickListener[listener] && clickListener[listener].call(this);
-    };
+        if(listener === 'infinite') {
+            Object.setPrototypeOf(this._pageTurner, AutoPageTurner.prototype);            
+        }
+
+        this._pageTurner.more(async () => {
+            const { hasNext } = await this._detail.addImg();
+            return hasNext;
+        })
+    }
 
     proto.addEvent = function() {
-        this.$click = this.displayMore.bind(this);
+        this.$click = this.click.bind(this);
         this.$more.addEventListener('click', this.$click);
     }
 
@@ -134,40 +156,65 @@ const ItemDetail = (() => {
                 <div style="flex-direction: column;">
                 </div>
                 <div class="js-more Igw0E rBNOH YBx95 ybXk5 _4EzTm soMvl" style="margin-right: 8px;">
-                    <button data-listener="loadMore" class="sqdOP L3NKy y3zKF _4pI4F" type="button" style="margin: 16px 8px1">더보기</button>
-                    <button data-listener="initInfinite" class="sqdOP L3NKy y3zKF _4pI4F" type="button" style="margin: 16px 8px">전체보기</button>
+                    <button data-listener="more" class="sqdOP L3NKy y3zKF _4pI4F" type="button" style="margin: 16px 8px">더보기</button>
+                    <button data-listener="infinite" class="sqdOP L3NKy y3zKF _4pI4F" type="button" style="margin: 16px 8px">전체보기</button>
                 </div>
-                <div class="js-loading _4emnV" style="display:none">
+                <div class="js-loading _4emnV" style="display: none;">
                     <div class="Igw0E IwRSH YBx95 _4EzTm _9qQ0O ZUqME" style="height: 32px; width: 32px;"><svg aria-label="읽어들이는 중..." class="By4nA" viewBox="0 0 100 100"><rect fill="#555555" height="6" opacity="0" rx="3" ry="3" transform="rotate(-90 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.08333333333333333" rx="3" ry="3" transform="rotate(-60 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.16666666666666666" rx="3" ry="3" transform="rotate(-30 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.25" rx="3" ry="3" transform="rotate(0 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.3333333333333333" rx="3" ry="3" transform="rotate(30 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.4166666666666667" rx="3" ry="3" transform="rotate(60 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.5" rx="3" ry="3" transform="rotate(90 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.5833333333333334" rx="3" ry="3" transform="rotate(120 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.6666666666666666" rx="3" ry="3" transform="rotate(150 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.75" rx="3" ry="3" transform="rotate(180 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.8333333333333334" rx="3" ry="3" transform="rotate(210 50 50)" width="25" x="72" y="47"></rect><rect fill="#555555" height="6" opacity="0.9166666666666666" rx="3" ry="3" transform="rotate(240 50 50)" width="25" x="72" y="47"></rect></svg></div>
                 </div>
             </div>
         `;
-    } 
+    }
 
     return ItemDetail;
-})();   
+})();
 
 const Item = (() => {
     const Item = function($parent, detailData = {}, imgDataList = [], profileData = {}) {
         this.$parent = $parent;
-        this.render(detailData, imgDataList, profileData, innerWidth);
+        this._dataList = imgDataList;
+        this.render(detailData, profileData);
         this.$el = this.$parent.firstElementChild;
+        this.$slider = this.$el.querySelector('.js-slider');
+        this.$sliderList = this.$el.querySelector('ul');
+        this.$left = this.$el.querySelector('.js-left');
+        this.$right = this.$el.querySelector('.js-right');
+        this.$pagebar = this.$el.querySelector('.js-pagebar');
     }
     const proto = Item.prototype;
 
     proto.create = function() {
-    };
+    }
 
     proto.destroy = function() {
-        this.$parent.removeChild;
-    };
+        this.$parent.removeChild(this.$el);
+    }
 
-    proto.render = function(data, imgDataList, profileData, width) {
+    proto.click = function() {
+         // TODO $left/$right 화살표 숨김/표시 (필요한 로직 추가)
+        // TODO this.$slider.style.transform = `translateX(${이동좌표}px)`;
+        // TODO $pagebar 이미지에 대응되는 엘리먼트로 XCodT 클래스 이동 (on 처리)
+        // TODO 가로사이즈는 innerWidth로 직접 잡거나, innerWidth를 캐싱해두고 사용
+    }
+
+    proto.resize = function() {
+        // HACK 현재 데이터바인딩을 지원하지 않으므로, 리스트 모든 엘리먼트 지우고 새로 렌더링
+        while(this.$sliderList.firstChildj) {
+            this.$sliderList.removeChild(this.$sliderList.firstChild);
+        }
+        this.$sliderList.insertAdjacentHTML('beforeend', `
+            ${this.htmlSliderImgs(this._dataList)}
+        `);
+        // TODO 리프레시 전 슬라이드 이미지 다시 노출 (좌표보정)
+        // TODO 가로사이즈는 innerWidth로 직접 잡거나, innerWidth를 캐싱해두고 사용
+    }
+
+    proto.htmlSliderImgs = function(imgDataList) {
         const imgs = imgDataList.reduce((html, img) => {
             html += `
-                <li class="_-1_m6" style="opacity: 1; width: ${width}px;">
-                    <div class="bsGjF" style="margin-left: 0px; width: ${width}px;">
-                        <div class="Igw0E IwRSH eGOV_ _4EzTm" style="width: ${width}px;">
+                <li class="_-1_m6" style="opacity: 1; width: ${innerWidth}px;">
+                    <div class="bsGjF" style="margin-left: 0px; width: ${innerWidth}px;">
+                        <div class="Igw0E IwRSH eGOV_ _4EzTm" style="width: ${innerWidth}px;">
                             <div role="button" tabindex="0" class="ZyFrc">
                                 <div class="eLAPa RzuR0">
                                     <div class="KL4Bh" style="padding-bottom: 100%;">
@@ -182,15 +229,17 @@ const Item = (() => {
             `;
             return html;
         }, '');
+        return imgs;
+    }
 
-        const navs = imgDataList.reduce((html, img, index) => {
+    proto.render = function(data, profileData) {
+        const navs = this._dataList.reduce((html, img, index) => {
             const on = index === 0 ? 'XCodT' : '';
             html += `
                 <div class="Yi5aA ${on}"></div>
             `;
             return html;
         }, '');
-
         this.$parent.insertAdjacentHTML('afterbegin', `
             <article class="QBXjJ M9sTE h0YNM SgTZ1 Tgarh">
                 <header class="Ppjfr UE9AK wdOqh">
@@ -214,15 +263,15 @@ const Item = (() => {
                                         <div class="js-slider MreMs" tabindex="0" style="transition-duration: 0.25s; transform: translateX(0px);">
                                             <div class="qqm6D">
                                                 <ul class="YlNGR" style="padding-left: 0px; padding-right: 0px;">
-                                                    ${imgs}
+                                                    ${this.htmlSliderImgs(this._dataList)}
                                                 </ul>
                                             </div>
                                         </div>
                                     </div>
-                                    <button class="POSa_" tabindex="-1">
+                                    <button class="js-left POSa_" tabindex="-1">
                                         <div class="coreSpriteLeftChevron"></div>
                                     </button>
-                                    <button class="_6CZji" tabindex="-1">
+                                    <button class="js-right _6CZji" tabindex="-1">
                                         <div class="coreSpriteRightChevron"></div>
                                     </button>
                                 </div>
@@ -278,7 +327,6 @@ const Item = (() => {
     return Item;
 })();
 
-
 const Detail = (() => {
     const Detail = function($parent, detailDataList = []) {
         this.$parent = $parent;
@@ -288,20 +336,19 @@ const Detail = (() => {
     };
     const proto = Detail.prototype;
 
-    proto.create = () => {
-    };
-
+    proto.create = function() {
+    }
     proto.destroy = function() {
         this.$elList.forEach($el => this.$parent.removeChild($el));
-    };
+    }
 
     proto.addImg = function() {
         return new Promise(resolve => {
             const detailData = this._dataListTemp.shift();
             if(!detailData) {
-                resolove({ hasNext : false });
+                resolve({ hasNext: false });
             }
-            
+
             this.render(detailData);
             const $el = this.$parent.lastElementChild;
             this.$elList.push($el);
@@ -311,8 +358,7 @@ const Detail = (() => {
                 resolve({ hasNext: this._dataListTemp.length > 0 });
             }
         });
-    };
-
+    }
 
     proto.render = function(img) {
         this.$parent.insertAdjacentHTML('beforeend', `
@@ -321,10 +367,9 @@ const Detail = (() => {
             </article>
         `);
     }
+
     return Detail;
 })();
 
 const root = new Root('main');
 root.create();
-// root.destroy();
-// root.create(); 
