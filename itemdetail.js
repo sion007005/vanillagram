@@ -181,6 +181,7 @@ const Item = (() => {
         this.$right = this.$el.querySelector('.js-right');
         this.$pagebar = this.$el.querySelector('.js-pagebar');
         this.imgIndex = 0;
+        this.duration = '0.25s';
     }
     const proto = Item.prototype;
 
@@ -194,7 +195,7 @@ const Item = (() => {
     }
 
     proto.click = function(e) {
-        const direction = e.target.parentNode;
+        const direction = e.currentTarget;
         if(direction === this.$right) {
             this.imgIndex++;
         } else if(direction === this.$left) {
@@ -210,6 +211,8 @@ const Item = (() => {
         this.$click = this.click.bind(this); 
         this.$left.addEventListener('click', this.$click);
         this.$right.addEventListener('click', this.$click);
+        this.$resize = this.resize.bind(this);
+        window.addEventListener('resize', this.$resize);
     };
 
     proto.moveImg = function() {
@@ -237,17 +240,20 @@ const Item = (() => {
         next && next.classList.add(onClass);
     }
 
-    // proto.resize = function() {
-    //     // HACK 현재 데이터바인딩을 지원하지 않으므로, 리스트 모든 엘리먼트 지우고 새로 렌더링
-    //     while(this.$sliderList.firstChildj) {
-    //         this.$sliderList.removeChild(this.$sliderList.firstChild);
-    //     }
-    //     this.$sliderList.insertAdjacentHTML('beforeend', `
-    //         ${this.htmlSliderImgs(this._dataList)}
-    //     `);
-    //     // TODO 리프레시 전 슬라이드 이미지 다시 노출 (좌표보정)
-    //     // TODO 가로사이즈는 innerWidth로 직접 잡거나, innerWidth를 캐싱해두고 사용
-    // }
+    proto.resize = function() {
+        while(this.$sliderList.firstChild) {
+            this.$sliderList.removeChild(this.$sliderList.firstChild);
+        }
+        this.$sliderList.insertAdjacentHTML('beforeend', `
+            ${this.htmlSliderImgs(this._dataList)}
+        `);
+
+        this.$slider.style.transitionDuration = '';
+        this.moveImg();
+        setTimeout(() => {
+            this.$slider.style.transitionDuration = this.duration;
+        });
+    }
 
     proto.htmlSliderImgs = function(imgDataList) {
         const imgs = imgDataList.reduce((html, img) => {
